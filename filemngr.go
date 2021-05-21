@@ -70,7 +70,7 @@ func (fm FileManager) Tail(lines int) (string, error) {
 		j++
 	}
 
-	return strings.Join(lo, ""), nil
+	return strings.Join(lo, "\n"), nil
 }
 
 func (fm FileManager) Run() error {
