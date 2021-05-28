@@ -1,30 +1,29 @@
 package main
 
 import (
-	"os"
-    "fmt"
-    "log"
+	"fmt"
+	"github.com/gorilla/mux"
 	"io/ioutil"
-    "net/http"
-    "github.com/gorilla/mux"
-	"time"
+	"log"
+	"net/http"
+	"os"
 	"strconv"
+	"time"
 )
-
 
 var fmngr *FileManager
 var w chan string
 
 func handleRequests(p string) {
-    myRouter := mux.NewRouter().StrictSlash(true)
-    myRouter.HandleFunc("/tail/{qtd}", tail)
-    myRouter.HandleFunc("/info", info)
-    myRouter.HandleFunc("/warn", warn)
-    myRouter.HandleFunc("/error", erro)
+	myRouter := mux.NewRouter().StrictSlash(true)
+	myRouter.HandleFunc("/tail/{qtd}", tail)
+	myRouter.HandleFunc("/info", info)
+	myRouter.HandleFunc("/warn", warn)
+	myRouter.HandleFunc("/error", erro)
 
-    log.Fatal(http.ListenAndServe(":"+p, myRouter))
+	log.Fatal(http.ListenAndServe(":"+p, myRouter))
 }
-		
+
 func main() {
 	fmt.Println("loggo - Log Service")
 	port := os.Args[1]
@@ -42,8 +41,8 @@ func main() {
 	fmngr = NewFileManager(path)
 	w = fmngr.WriteChan()
 
-	go func() { 
-		fmngr.Run() 
+	go func() {
+		fmngr.Run()
 	}()
 
 	handleRequests(port)
@@ -57,12 +56,10 @@ func tail(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	t, err := fmngr.Tail(qtd)
+	err = fmngr.Tail(w, qtd)
 	if err != nil {
-		t = err.Error()
+		fmt.Fprintf(w, err.Error())
 	}
-
-	fmt.Fprintf(w, t)
 }
 
 func info(w http.ResponseWriter, r *http.Request) {
@@ -96,5 +93,5 @@ func erro(w http.ResponseWriter, r *http.Request) {
 
 func logg(verb string, t string) {
 	dt := time.Now().Format("01-02-2006 15:04:05")
-	w <- fmt.Sprintf("%s %s %s\n", dt, verb, t) 
+	w <- fmt.Sprintf("%s %s %s\n", dt, verb, t)
 }

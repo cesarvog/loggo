@@ -1,17 +1,17 @@
 package main
 
 import (
-		"time"
-		"fmt"
-		"bufio"
-		"os"
-		"strings"
-		"errors"
+	"bufio"
+	"errors"
+	"fmt"
+	"io"
+	"os"
+	"time"
 )
 
 type FileManager struct {
-	Path string
-	ch chan string
+	Path    string
+	ch      chan string
 	running bool
 }
 
@@ -19,14 +19,14 @@ func (fm FileManager) WriteChan() chan string {
 	return fm.ch
 }
 
-func (fm FileManager) Tail(lines int) (string, error) {
+func (fm FileManager) Tail(w io.Writer, lines int) error {
 	idx := 0
 	ll := make([]string, lines)
 	hasContent := false
 
 	f, err := os.Open(fm.Path)
 	if err != nil {
-		return "", nil
+		return err
 	}
 
 	scanner := bufio.NewScanner(f)
@@ -36,7 +36,7 @@ func (fm FileManager) Tail(lines int) (string, error) {
 		ll[idx] = scanner.Text()
 		idx++
 
-		if(idx >= lines) {
+		if idx >= lines {
 			idx = 0
 		}
 
@@ -44,33 +44,29 @@ func (fm FileManager) Tail(lines int) (string, error) {
 	}
 
 	if !hasContent {
-		return "", nil
+		return nil
 	}
 
-	//put array in order
-	lo := make([]string, lines)
-	j := 0
-
+	//TODO put log when write fails
+	//write in order
 	for i := idx; i < lines; i++ {
 		if ll[i] == "" {
 			continue
 		}
 
-		lo[j] = ll[i]
-		j++
+		fmt.Fprintf(w, "%s\n", ll[i])
 	}
 
 	//jump to 0 index
-	for i := 0; i<idx; i++ {
+	for i := 0; i < idx; i++ {
 		if ll[i] == "" {
 			break
 		}
 
-		lo[j] = ll[i]
-		j++
+		fmt.Fprintf(w, "%s\n", ll[i])
 	}
 
-	return strings.Join(lo, "\n"), nil
+	return nil
 }
 
 func (fm FileManager) Run() error {
@@ -99,11 +95,10 @@ func (fm FileManager) Run() error {
 		default:
 			closeFile(file)
 			file = nil
-			time.Sleep(5 * time.Second)	
+			time.Sleep(5 * time.Second)
 		}
 	}
 }
-
 
 func NewFileManager(path string) *FileManager {
 	return &FileManager{path, make(chan string, 100), false}
